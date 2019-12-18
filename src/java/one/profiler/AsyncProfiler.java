@@ -129,6 +129,16 @@ public class AsyncProfiler implements AsyncProfilerMXBean {
     }
 
     /**
+      * Dump profile in 'record' format
+     *
+     * @param counter Which counter to display in the output
+     * @return Textual representation of the profile
+     */
+    public String dumpRecords() {
+        return dumpRecords0();
+    }
+
+    /**
      * Dump collected stack traces
      *
      * @param maxTraces Maximum number of stack traces to dump. 0 means no limit

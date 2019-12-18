@@ -154,6 +154,7 @@ public class AsyncProfiler implements AsyncProfilerMXBean {
     private native void stop0() throws IllegalStateException;
     private native String execute0(String command) throws IllegalArgumentException, java.io.IOException;
     private native String dumpCollapsed0(int counter);
+    private native String dumpRecords0();
     private native String dumpTraces0(int maxTraces);
     private native String dumpFlat0(int maxMethods);
     private native String version0();

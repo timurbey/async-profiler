@@ -98,7 +98,7 @@ void JNICALL LockTracer::UnsafeParkTrap(JNIEnv* env, jobject instance, jboolean 
     if (lock_class != NULL) {
         jvmti->GetTime(&park_start_time);
     }
-    
+
     _original_Unsafe_Park(env, instance, isAbsolute, time);
 
     if (lock_class != NULL) {

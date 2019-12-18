@@ -107,6 +107,8 @@ Error Arguments::parse(const char* args) {
         } else if (strcmp(arg, "collapsed") == 0 || strcmp(arg, "folded") == 0) {
             _output = OUTPUT_COLLAPSED;
             _counter = value == NULL || strcmp(value, "samples") == 0 ? COUNTER_SAMPLES : COUNTER_TOTAL;
+        } else if (strcmp(arg, "records") == 0) {
+            _output = OUTPUT_RECORDS;
         } else if (strcmp(arg, "flamegraph") == 0 || strcmp(arg, "svg") == 0) {
             _output = OUTPUT_FLAMEGRAPH;
             _counter = value == NULL || strcmp(value, "samples") == 0 ? COUNTER_SAMPLES : COUNTER_TOTAL;
@@ -229,6 +231,8 @@ Output Arguments::detectOutputFormat(const char* file) {
             return OUTPUT_JFR;
         } else if (strcmp(ext, ".collapsed") == 0 || strcmp(ext, ".folded") == 0) {
             return OUTPUT_COLLAPSED;
+        } else if (strcmp(ext, ".records") == 0) {
+            return OUTPUT_RECORDS;
         }
     }
     return OUTPUT_TEXT;

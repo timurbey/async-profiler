@@ -86,6 +86,22 @@ class VM {
         return _vm->GetEnv((void**)&jni, JNI_VERSION_1_6) == 0 ? jni : NULL;
     }
 
+    static jthread currentThread() {
+      JNIEnv* jni = VM::jni();
+
+      jclass cls = jni->FindClass("java/lang/Thread");
+      jmethodID mthd = jni->GetStaticMethodID(cls, "currentThread", "()Ljava/lang/Thread;");
+      return (jthread)jni->CallStaticObjectMethod(cls, mthd);
+    }
+
+    static jlong threadId() {
+      JNIEnv* jni = VM::jni();
+
+      jclass cls = jni->FindClass("java/lang/Thread");
+      jmethodID mthd = jni->GetMethodID(cls, "getId", "()J");
+      return jni->CallLongMethod(VM::currentThread(), mthd);
+    }
+
     static bool is_hotspot() {
         return _hotspot;
     }

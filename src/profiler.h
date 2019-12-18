@@ -17,9 +17,14 @@
 #ifndef _PROFILER_H
 #define _PROFILER_H
 
+#include <atomic>
+#include <condition_variable>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <time.h>
+#include <queue>
+#include <vector>
 #include "arch.h"
 #include "arguments.h"
 #include "engine.h"
@@ -40,6 +45,7 @@ const int RESERVED_FRAMES   = 4;
 const int MAX_NATIVE_LIBS   = 2048;
 const int CONCURRENCY_LEVEL = 16;
 
+const int MAX_RECORDS = 2000;
 
 static inline int cmp64(u64 a, u64 b) {
     return a > b ? 1 : a == b ? 0 : -1;
@@ -51,6 +57,11 @@ union CallTraceBuffer {
     jvmtiFrameInfo _jvmti_frames[1];
 };
 
+struct ThreadRecord {
+  u64 timestamp = -1;
+  u64 tid = -1;
+  // jlong jid = -1;
+};
 
 class CallTraceSample {
   private:
@@ -58,6 +69,9 @@ class CallTraceSample {
     u64 _counter;
     int _start_frame; // Offset in frame buffer
     int _num_frames;
+
+    ThreadRecord record_arr[MAX_RECORDS];
+    u64 _record_count;
 
   public:
     static int comparator(const void* s1, const void* s2) {
@@ -197,6 +211,7 @@ class Profiler {
     void switchThreadEvents(jvmtiEventMode mode);
     void dumpSummary(std::ostream& out);
     void dumpCollapsed(std::ostream& out, Arguments& args);
+    void dumpRecords(std::ostream& out);
     void dumpFlameGraph(std::ostream& out, Arguments& args, bool tree);
     void dumpTraces(std::ostream& out, Arguments& args);
     void dumpFlat(std::ostream& out, Arguments& args);

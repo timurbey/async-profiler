@@ -464,7 +464,7 @@ Error PerfEvents::start(Arguments& args) {
         _events = (PerfEvent*)calloc(max_events, sizeof(PerfEvent));
         _max_events = max_events;
     }
-    
+
     OS::installSignalHandler(SIGPROF, signalHandler);
 
     // Enable thread events before traversing currently running threads

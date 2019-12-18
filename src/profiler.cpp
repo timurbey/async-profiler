@@ -85,10 +85,26 @@ int Profiler::storeCallTrace(int num_frames, ASGCT_CallFrame* frames, u64 counte
         if (++i == MAX_CALLTRACES) i = 0;  // move to next slot
         if (i == bucket) return 0;         // the table is full
     }
-    
+
     // CallTrace hash found => atomically increment counter
     atomicInc(_traces[i]._samples);
     atomicInc(_traces[i]._counter, counter);
+
+    // teb44: record keeping structures
+    if (_traces[i]._record_count < MAX_RECORDS) {
+      ThreadRecord record;
+
+      record.timestamp = OS::millis();
+      record.tid = OS::threadId();
+      // record.jid = VM::threadId();
+
+      _traces[i].record_arr[_traces[i]._record_count] = record;
+      atomicInc(_traces[i]._record_count);
+
+      if (_traces[i]._record_count == MAX_RECORDS)
+        std::cout << "filled bucket" << std::endl;
+    }
+
     return i;
 }
 
@@ -137,7 +153,7 @@ void Profiler::storeMethod(jmethodID method, jint bci, u64 counter) {
             }
             continue;
         }
-        
+
         if (++i == MAX_CALLTRACES) i = 0;  // move to next slot
         if (i == bucket) return;           // the table is full
     }
@@ -382,7 +398,7 @@ bool Profiler::addressInCode(const void* pc) {
             return true;
         }
     }
-    
+
     // This can be some other dynamically generated code, but we don't know it. Better stay safe.
     return false;
 }
@@ -690,7 +706,7 @@ void Profiler::dumpSummary(std::ostream& out) {
             "Total samples       : %lld\n",
             _total_samples);
     out << buf;
-    
+
     double percent = 100.0 / _total_samples;
     for (int i = 1; i < ASGCT_FAILURE_TYPES; i++) {
         const char* err_string = asgctError(-i);
@@ -712,7 +728,7 @@ void Profiler::dumpSummary(std::ostream& out) {
 
 /*
  * Dump stacks in FlameGraph input format:
- * 
+ *
  * <frame>;<frame>;...;<topmost frame> <count>
  */
 void Profiler::dumpCollapsed(std::ostream& out, Arguments& args) {
@@ -740,6 +756,36 @@ void Profiler::dumpCollapsed(std::ostream& out, Arguments& args) {
 
     if (unknown != 0) {
         out << "[frame_buffer_overflow] " << unknown << "\n";
+    }
+}
+
+void Profiler::dumpRecords(std::ostream& out) {
+    MutexLocker ml(_state_lock);
+    if (_state != IDLE || _engine == NULL) return;
+
+    FrameName fn(STYLE_DOTTED, _thread_names_lock, _thread_names);
+    u64 unknown = 0;
+
+    for (int i = 0; i < MAX_CALLTRACES; i++) {
+        CallTraceSample& trace = _traces[i];
+        if (trace._samples == 0) continue;
+
+        if (trace._num_frames == 0) {
+            continue;
+        }
+        std::string trace_string;
+
+        for (int j = 0; j < trace._num_frames; j++) {
+            const char* frame_name = fn.name(_frame_buffer[trace._start_frame + j]);
+            trace_string.append(frame_name).append(j == trace._num_frames - 1 ? "" : "@");
+        }
+
+        for (int j = 0; j < trace._record_count; j++) {
+            ThreadRecord record = trace.record_arr[j];
+            // out << record.timestamp << ',' << record.tid << ','<< record.jid << ',' << trace_string << std::endl;
+            out << record.timestamp << ';' << record.tid << ';' << trace_string << std::endl;
+        }
+        trace._record_count = 0;
     }
 }
 
@@ -904,6 +950,10 @@ void Profiler::runInternal(Arguments& args, std::ostream& out) {
             switch (args._output) {
                 case OUTPUT_COLLAPSED:
                     dumpCollapsed(out, args);
+                    break;
+                case OUTPUT_RECORDS:
+                    out << "timestamp;id;trace\n";
+                    dumpRecords(out);
                     break;
                 case OUTPUT_FLAMEGRAPH:
                     dumpFlameGraph(out, args, false);

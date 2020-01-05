@@ -72,6 +72,7 @@ class CallTraceSample {
 
     ThreadRecord record_arr[MAX_RECORDS];
     u64 _record_count;
+    SpinLock lock;
 
   public:
     static int comparator(const void* s1, const void* s2) {

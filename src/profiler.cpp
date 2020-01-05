@@ -91,6 +91,7 @@ int Profiler::storeCallTrace(int num_frames, ASGCT_CallFrame* frames, u64 counte
     atomicInc(_traces[i]._counter, counter);
 
     // teb44: record keeping structures
+    _traces[i].lock.lock();
     if (_traces[i]._record_count < MAX_RECORDS) {
       ThreadRecord record;
 
@@ -98,12 +99,13 @@ int Profiler::storeCallTrace(int num_frames, ASGCT_CallFrame* frames, u64 counte
       record.tid = OS::threadId();
       // record.jid = VM::threadId();
 
-      _traces[i].record_arr[_traces[i]._record_count] = record;
       atomicInc(_traces[i]._record_count);
+      _traces[i].record_arr[_traces[i]._record_count - 1] = record;
 
       if (_traces[i]._record_count == MAX_RECORDS)
-        std::cout << "filled bucket" << std::endl;
+        std::cout << "filled bucket " << i << std::endl;
     }
+    _traces[i].lock.unlock();
 
     return i;
 }
@@ -782,7 +784,6 @@ void Profiler::dumpRecords(std::ostream& out) {
 
         for (int j = 0; j < trace._record_count; j++) {
             ThreadRecord record = trace.record_arr[j];
-            // out << record.timestamp << ',' << record.tid << ','<< record.jid << ',' << trace_string << std::endl;
             out << record.timestamp << ';' << record.tid << ';' << trace_string << std::endl;
         }
         trace._record_count = 0;

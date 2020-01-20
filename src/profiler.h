@@ -116,6 +116,8 @@ class Profiler {
     Engine* _engine;
     time_t _start_time;
 
+    SpinLock record_lock;
+
     u64 _total_samples;
     u64 _total_counter;
     u64 _failures[ASGCT_FAILURE_TYPES];

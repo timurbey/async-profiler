@@ -91,21 +91,24 @@ int Profiler::storeCallTrace(int num_frames, ASGCT_CallFrame* frames, u64 counte
     atomicInc(_traces[i]._counter, counter);
 
     // teb44: record keeping structures
-    _traces[i].lock.lock();
-    if (_traces[i]._record_count < MAX_RECORDS) {
-      ThreadRecord record;
+    // _traces[i].lock.lock();
+    ThreadRecord record;
 
-      record.timestamp = OS::millis();
-      record.tid = OS::threadId();
-      // record.jid = VM::threadId();
+    record.timestamp = OS::millis();
+    record.tid = OS::threadId();
+    // record.jid = VM::threadId();
 
-      atomicInc(_traces[i]._record_count);
-      _traces[i].record_arr[_traces[i]._record_count - 1] = record;
+    if (record_lock.tryLock()) {
+      if (__sync_fetch_and_add(&_traces[i]._record_count, 0) < MAX_RECORDS) {
+        _traces[i].record_arr[atomicInc(_traces[i]._record_count)] = record;
 
-      if (_traces[i]._record_count == MAX_RECORDS)
-        std::cout << "filled bucket " << i << std::endl;
+        if (_traces[i]._record_count == MAX_RECORDS)
+          std::cout << "filled bucket " << i << std::endl;
+      }
+
+      record_lock.unlock();
     }
-    _traces[i].lock.unlock();
+
 
     return i;
 }
@@ -768,26 +771,28 @@ void Profiler::dumpRecords(std::ostream& out) {
     FrameName fn(STYLE_DOTTED, _thread_names_lock, _thread_names);
     u64 unknown = 0;
 
+    record_lock.lock();
     for (int i = 0; i < MAX_CALLTRACES; i++) {
         CallTraceSample& trace = _traces[i];
         if (trace._samples == 0) continue;
-
         if (trace._num_frames == 0) {
             continue;
         }
-        std::string trace_string;
 
+        std::string trace_string;
         for (int j = 0; j < trace._num_frames; j++) {
             const char* frame_name = fn.name(_frame_buffer[trace._start_frame + j]);
             trace_string.append(frame_name).append(j == trace._num_frames - 1 ? "" : "@");
         }
 
-        for (int j = 0; j < trace._record_count; j++) {
+        u64 records = trace._record_count;
+        for (int j = 0; j < records; j++) {
             ThreadRecord record = trace.record_arr[j];
             out << record.timestamp << ';' << record.tid << ';' << trace_string << std::endl;
         }
-        trace._record_count = 0;
+        __sync_fetch_and_sub(&trace._record_count, trace._record_count);
     }
+    record_lock.unlock();
 }
 
 void Profiler::dumpFlameGraph(std::ostream& out, Arguments& args, bool tree) {

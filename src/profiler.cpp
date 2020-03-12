@@ -94,8 +94,9 @@ int Profiler::storeCallTrace(int num_frames, ASGCT_CallFrame* frames, u64 counte
     // _traces[i].lock.lock();
     ThreadRecord record;
 
-    record.timestamp = OS::millis();
+    record.timestamp = OS::nanotime();
     record.tid = OS::threadId();
+    // record.timestamp = OS::millis();
     // record.jid = VM::threadId();
 
     if (record_lock.tryLock()) {

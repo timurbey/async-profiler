@@ -131,7 +131,6 @@ public class AsyncProfiler implements AsyncProfilerMXBean {
     /**
       * Dump profile in 'record' format
      *
-     * @param counter Which counter to display in the output
      * @return Textual representation of the profile
      */
     public String dumpRecords() {

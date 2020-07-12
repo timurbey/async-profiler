@@ -94,9 +94,9 @@ int Profiler::storeCallTrace(int num_frames, ASGCT_CallFrame* frames, u64 counte
     // _traces[i].lock.lock();
     ThreadRecord record;
 
-    record.timestamp = OS::nanotime();
+    record.timestamp = OS::millis();
+    // record.timestamp = OS::nanotime();
     record.tid = OS::threadId();
-    // record.timestamp = OS::millis();
     // record.jid = VM::threadId();
 
     if (record_lock.tryLock()) {
@@ -783,13 +783,13 @@ void Profiler::dumpRecords(std::ostream& out) {
         std::string trace_string;
         for (int j = 0; j < trace._num_frames; j++) {
             const char* frame_name = fn.name(_frame_buffer[trace._start_frame + j]);
-            trace_string.append(frame_name).append(j == trace._num_frames - 1 ? "" : "@");
+            trace_string.append(frame_name).append(j == trace._num_frames - 1 ? "" : ";");
         }
 
         u64 records = trace._record_count;
         for (int j = 0; j < records; j++) {
             ThreadRecord record = trace.record_arr[j];
-            out << record.timestamp << ';' << record.tid << ';' << trace_string << std::endl;
+            out << record.timestamp << ',' << record.tid << ',' << trace_string << std::endl;
         }
         __sync_fetch_and_sub(&trace._record_count, trace._record_count);
     }
